@@ -47,14 +47,15 @@
     const el = mount(`
       <div class="card">
         ${dashes(total, 0)}
-        <h1 class="display">Find your<br>coffee.</h1>
-        <p class="lead">${total} quick questions while you wait in line. We’ll match you with the beans, capsules, drips or cans from our bar that fit you best.</p>
-        <div class="start-foot">
-          <button class="btn btn-primary btn-big" type="button">Start the quiz</button>
-          <p class="eyebrow">Takes 30 seconds<br>No sign-up</p>
+        <h1 class="display">Find<br>your<br>coffee.</h1>
+        <div class="bottom">
+          <p class="lead">${total} quick questions while you wait in line. We’ll match you with the beans, capsules, drips or cans from our bar that fit you best.</p>
+          <div class="start-foot">
+            <button class="btn btn-primary btn-big" type="button">Start the quiz</button>
+            <p class="eyebrow">Takes 30 seconds<br>No sign-up</p>
+          </div>
         </div>
       </div>
-      <div class="photo"><img src="assets/photos/start.jpg" alt=""></div>
     `, 'start');
     el.addEventListener('click', () => { state.screen = 'question'; state.step = 0; renderQuestion(); });
   }
@@ -74,20 +75,21 @@
         ${dashes(qs.length, state.step)}
         <div class="q-meta"><span class="eyebrow">Question ${pad(state.step + 1)} / ${pad(qs.length)}</span><span class="eyebrow">${hint}</span></div>
         <h1 class="display">${esc(q.title)}</h1>
-        <div class="options${cols}">
-          ${q.options.map((o, i) => `
-            <button class="opt${selected(o.value) ? ' selected' : ''}" type="button" data-value="${esc(o.value)}" style="--i:${i}">
-              <span class="opt-label">${esc(o.label)}</span>
-              ${o.sub ? `<span class="opt-sub">${esc(o.sub)}</span>` : ''}
-              ${isMulti ? '<span class="tick"></span>' : ''}
-            </button>`).join('')}
-        </div>
-        <div class="actions">
-          <button class="btn btn-ghost" type="button" data-act="back">Back</button>
-          ${isMulti ? `<button class="btn btn-primary" type="button" data-act="next"${(value || []).length ? '' : ' disabled'}>${isLast ? 'Show my coffee' : 'Next question'}</button>` : ''}
+        <div class="bottom">
+          <div class="options${cols}">
+            ${q.options.map((o, i) => `
+              <button class="opt${selected(o.value) ? ' selected' : ''}" type="button" data-value="${esc(o.value)}" style="--i:${i}">
+                <span class="opt-label">${esc(o.label)}</span>
+                ${o.sub ? `<span class="opt-sub">${esc(o.sub)}</span>` : ''}
+                ${isMulti ? '<span class="tick"></span>' : ''}
+              </button>`).join('')}
+          </div>
+          <div class="actions">
+            <button class="btn btn-ghost" type="button" data-act="back">Back</button>
+            ${isMulti ? `<button class="btn btn-primary" type="button" data-act="next"${(value || []).length ? '' : ' disabled'}>${isLast ? 'Show my coffee' : 'Next question'}</button>` : ''}
+          </div>
         </div>
       </div>
-      <div class="photo"><img src="${esc(q.photo)}" alt="" style="object-position:${esc(q.photoPos || '50% 50%')}"></div>
     `, 'question');
 
     let locked = false;
@@ -153,28 +155,22 @@
         <div class="match-head"><span class="eyebrow">Your match</span><span class="eyebrow">${esc(formatLabel(p))}</span></div>
         <h1 class="display match-name">${esc(p.name)}</h1>
         <div class="match-body">
-          <div class="tile"><img src="${esc(p.image)}" alt=""></div>
           <div class="match-info">
             <p class="notes">${esc(p.notes.join(' · '))}</p>
             <p class="blurb">${esc(p.blurb)}</p>
             <ul class="why">${main.reasons.slice(0, 3).map((r) => `<li>${esc(r)}</li>`).join('')}</ul>
-            ${scales(p.taste)}
           </div>
+          ${scales(p.taste)}
         </div>
       </div>
-      ${alts.length ? `<div class="alts">${alts.map((r) => `
-        <div class="card alt">
-          <div class="alt-top">
-            <div class="tile"><img src="${esc(r.product.image)}" alt=""></div>
-            <div>
-              <p class="eyebrow">Also for you</p>
-              <p class="alt-name" style="margin-top:.625rem">${esc(r.product.name)}</p>
-            </div>
-          </div>
+      ${alts.length ? `<div class="alts-wrap"><p class="eyebrow">Also for you</p><div class="alts">${alts.map((r) => `
+        <div class="panel alt">
+          <p class="eyebrow">${esc(formatLabel(r.product))}</p>
+          <p class="alt-name">${esc(r.product.name)}</p>
           <p class="notes">${esc(r.product.notes.join(' · '))}</p>
           <ul class="why">${r.reasons.slice(0, 2).map((t) => `<li>${esc(t)}</li>`).join('')}</ul>
           ${scales(r.product.taste)}
-        </div>`).join('')}</div>` : ''}
+        </div>`).join('')}</div></div>` : ''}
       <div class="result-foot">
         <p>Show this screen to our barista.<span>We’ll grab it for you from the bar.</span></p>
         <button class="btn btn-primary" type="button" data-act="again">Start over</button>
@@ -184,15 +180,11 @@
     fitResult(el);
   }
 
-  // Подбираем размер packshot под свободное место: от крупного к мелкому, пока всё не влезет
+  // Длинное название + длинные причины могут не влезть — ужимаем по ступенькам
   function fitResult(el) {
-    const overflows = () => el.scrollHeight > el.clientHeight + 1;
-    for (const tight of [false, true]) {
-      el.classList.toggle('tight', tight);
-      for (let t = 27; t >= 15; t -= 1) {
-        el.style.setProperty('--tile', `${t}rem`);
-        if (!overflows()) return;
-      }
+    for (const level of ['tight', 'tighter']) {
+      if (el.scrollHeight <= el.clientHeight + 1) return;
+      el.classList.add(level);
     }
   }
 
@@ -270,9 +262,6 @@
   });
 
   /* ===================== старт ===================== */
-
-  // Прогреваем картинки, чтобы на iPad ничего не мигало
-  [...new Set(QUESTIONS.map((q) => q.photo).concat(PRODUCTS.map((p) => p.image)))].forEach((src) => { new Image().src = src; });
 
   document.addEventListener('contextmenu', (e) => e.preventDefault());
   document.addEventListener('gesturestart', (e) => e.preventDefault());
