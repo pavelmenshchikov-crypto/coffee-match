@@ -15,6 +15,7 @@
   const restartBtn = document.getElementById('restart');
 
   let state = { screen: 'start', step: 0, answers: {} };
+  let reloadOnStart = false;  // пришла новая версия, пока человек проходил квиз
 
   /* ===================== экраны ===================== */
 
@@ -42,6 +43,7 @@
   }
 
   function renderStart() {
+    if (reloadOnStart) { location.reload(); return; }
     state = { screen: 'start', step: 0, answers: {} };
     const total = QUESTIONS.length;
     const el = mount(`
@@ -267,6 +269,13 @@
   document.addEventListener('gesturestart', (e) => e.preventDefault());
 
   if ('serviceWorker' in navigator && location.protocol === 'https:') {
+    // Новая версия встала в кеш — перезагружаемся сами, но только на стартовом экране
+    let hadController = Boolean(navigator.serviceWorker.controller);
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!hadController) { hadController = true; return; }  // самая первая установка
+      if (state.screen === 'start') location.reload();
+      else reloadOnStart = true;
+    });
     navigator.serviceWorker.register('sw.js').catch(() => {});
   }
 

@@ -1,6 +1,6 @@
 /* Офлайн-кеш: после первого открытия приложение работает без интернета.
    После любой правки файлов поднимите VERSION — iPad подтянет новое при следующем открытии с сетью. */
-const VERSION = 'coffee-match-v2';
+const VERSION = 'coffee-match-v3';
 const FILES = [
   './',
   'index.html',
