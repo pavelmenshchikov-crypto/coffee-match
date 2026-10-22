@@ -1,6 +1,6 @@
 /* Офлайн-кеш: после первого открытия приложение работает без интернета.
    После любой правки файлов поднимите VERSION — iPad подтянет новое при следующем открытии с сетью. */
-const VERSION = 'coffee-match-v3';
+const VERSION = 'coffee-match-v4';
 const FILES = [
   './',
   'index.html',
@@ -19,7 +19,9 @@ const FILES = [
 ];
 
 self.addEventListener('install', (e) => {
-  e.waitUntil(caches.open(VERSION).then((c) => c.addAll(FILES)).then(() => self.skipWaiting()));
+  // cache: 'reload' — мимо HTTP-кеша браузера, иначе GitHub Pages (max-age=600) может подсунуть старые файлы
+  const fresh = FILES.map((f) => new Request(f, { cache: 'reload' }));
+  e.waitUntil(caches.open(VERSION).then((c) => c.addAll(fresh)).then(() => self.skipWaiting()));
 });
 
 self.addEventListener('activate', (e) => {
