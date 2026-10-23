@@ -1,6 +1,8 @@
-/* Офлайн-кеш: после первого открытия приложение работает без интернета.
-   После любой правки файлов поднимите VERSION — iPad подтянет новое при следующем открытии с сетью. */
-const VERSION = 'coffee-match-v4';
+/* Офлайн-кеш. Есть интернет — всегда берём свежие файлы с сервера и обновляем кеш.
+   Нет интернета (или он не ответил за NETWORK_TIMEOUT_MS) — отдаём из кеша.
+   После правки файлов поднимите VERSION, чтобы кеш для офлайна пересобрался целиком. */
+const VERSION = 'coffee-match-v5';
+const NETWORK_TIMEOUT_MS = 3000;
 const FILES = [
   './',
   'index.html',
@@ -33,14 +35,24 @@ self.addEventListener('activate', (e) => {
 });
 
 self.addEventListener('fetch', (e) => {
-  if (e.request.method !== 'GET') return;
+  const url = new URL(e.request.url);
+  if (e.request.method !== 'GET' || url.origin !== location.origin) return;
+  const key = url.origin + url.pathname;
   e.respondWith(
-    caches.match(e.request, { ignoreSearch: true }).then((hit) => hit || fetch(e.request).then((res) => {
-      if (res.ok && new URL(e.request.url).origin === location.origin) {
-        const copy = res.clone();
-        caches.open(VERSION).then((c) => c.put(e.request, copy));
-      }
-      return res;
-    }))
+    fromNetwork(key).catch(() => caches.match(key, { ignoreSearch: true }).then((hit) => hit || Response.error()))
   );
 });
+
+// Сеть с таймаутом. Если сеть ответила позже таймаута, кеш всё равно обновится
+function fromNetwork(key) {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(reject, NETWORK_TIMEOUT_MS);
+    fetch(new Request(key, { cache: 'no-cache' })).then((res) => {
+      clearTimeout(timer);
+      if (!res.ok) { reject(); return; }
+      const copy = res.clone();
+      caches.open(VERSION).then((c) => c.put(key, copy));
+      resolve(res);
+    }, (err) => { clearTimeout(timer); reject(err); });
+  });
+}

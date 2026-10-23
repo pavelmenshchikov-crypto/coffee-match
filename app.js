@@ -24,8 +24,9 @@
 
   const visibleQuestions = () => QUESTIONS.filter((q) => !(q.skipIf && q.skipIf(state.answers)));
 
+  // Пройденные и текущий вопрос — чёрные, оставшиеся — серые. На старте все серые (current = -1)
   function dashes(total, current) {
-    return `<div class="dashes">${Array.from({ length: total }, (_, i) => `<span class="dash${i === current ? ' on' : ''}"></span>`).join('')}</div>`;
+    return `<div class="dashes">${Array.from({ length: total }, (_, i) => `<span class="dash${i <= current ? ' on' : ''}"></span>`).join('')}</div>`;
   }
 
   function mount(html, cls) {
@@ -48,7 +49,7 @@
     const total = QUESTIONS.length;
     const el = mount(`
       <div class="card">
-        ${dashes(total, 0)}
+        ${dashes(total, -1)}
         <h1 class="display">Find<br>your<br>coffee.</h1>
         <div class="bottom">
           <p class="lead">${total} quick questions while you wait in line. We’ll match you with the beans, capsules, drips or cans from our bar that fit you best.</p>
