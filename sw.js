@@ -1,7 +1,8 @@
-/* Офлайн-кеш. Есть интернет — всегда берём свежие файлы с сервера и обновляем кеш.
-   Нет интернета (или он не ответил за NETWORK_TIMEOUT_MS) — отдаём из кеша.
-   После правки файлов поднимите VERSION, чтобы кеш для офлайна пересобрался целиком. */
-const VERSION = 'coffee-match-v5';
+/* Офлайн-кеш.
+   Код (HTML, JS, CSS): есть интернет — берём свежий с сервера, нет (или не ответил за NETWORK_TIMEOUT_MS) — из кеша.
+   Файлы из assets/ (фото, шрифты, иконки): сразу из кеша, чтобы на слабом Wi‑Fi ничего не ждало сеть.
+   После правки файлов поднимите VERSION, чтобы кеш пересобрался целиком — заменённые фото тоже подтянутся. */
+const VERSION = 'coffee-match-v6';
 const NETWORK_TIMEOUT_MS = 3000;
 const FILES = [
   './',
@@ -17,7 +18,24 @@ const FILES = [
   'assets/icons/apple-touch-icon.png',
   'assets/icons/icon-192.png',
   'assets/icons/icon-512.png',
-  'assets/icons/logo.svg'
+  'assets/icons/logo.svg',
+  'assets/products/brazil-monteiro-capsules.jpg',
+  'assets/products/brazil-monteiro-lobato.jpg',
+  'assets/products/bubble-gum-capsules.jpg',
+  'assets/products/colombia-condor-decaf.jpg',
+  'assets/products/colombia-guava-banana.jpg',
+  'assets/products/condor-decaf-capsules.jpg',
+  'assets/products/decaf-drip.jpg',
+  'assets/products/el-salvador-rufatti.jpg',
+  'assets/products/ethiopia-kebena.jpg',
+  'assets/products/ethiopia-kello-siko.jpg',
+  'assets/products/geisha-drip.jpg',
+  'assets/products/kenya-gititu.jpg',
+  'assets/products/nitro-black.jpg',
+  'assets/products/nitro-blood-orange.jpg',
+  'assets/products/office-blend.jpg',
+  'assets/products/rocket-flower-capsules.jpg',
+  'assets/products/rocket-flower-drip.jpg'
 ];
 
 self.addEventListener('install', (e) => {
@@ -38,9 +56,12 @@ self.addEventListener('fetch', (e) => {
   const url = new URL(e.request.url);
   if (e.request.method !== 'GET' || url.origin !== location.origin) return;
   const key = url.origin + url.pathname;
-  e.respondWith(
-    fromNetwork(key).catch(() => caches.match(key, { ignoreSearch: true }).then((hit) => hit || Response.error()))
-  );
+  const fromCache = () => caches.match(key, { ignoreSearch: true });
+  if (url.pathname.includes('/assets/')) {
+    e.respondWith(fromCache().then((hit) => hit || fromNetwork(key)).catch(() => Response.error()));
+    return;
+  }
+  e.respondWith(fromNetwork(key).catch(() => fromCache().then((hit) => hit || Response.error())));
 });
 
 // Сеть с таймаутом. Если сеть ответила позже таймаута, кеш всё равно обновится

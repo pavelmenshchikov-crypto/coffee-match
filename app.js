@@ -158,18 +158,24 @@
         <div class="match-head"><span class="eyebrow">Your match</span><span class="eyebrow">${esc(formatLabel(p))}</span></div>
         <h1 class="display match-name">${esc(p.name)}</h1>
         <div class="match-body">
+          <div class="tile"><img src="${esc(p.image)}" alt=""></div>
           <div class="match-info">
             <p class="notes">${esc(p.notes.join(' · '))}</p>
             <p class="blurb">${esc(p.blurb)}</p>
             <ul class="why">${main.reasons.slice(0, 3).map((r) => `<li>${esc(r)}</li>`).join('')}</ul>
+            ${scales(p.taste)}
           </div>
-          ${scales(p.taste)}
         </div>
       </div>
       ${alts.length ? `<div class="alts-wrap"><p class="eyebrow">Also for you</p><div class="alts">${alts.map((r) => `
         <div class="panel alt">
-          <p class="eyebrow">${esc(formatLabel(r.product))}</p>
-          <p class="alt-name">${esc(r.product.name)}</p>
+          <div class="alt-top">
+            <div class="tile"><img src="${esc(r.product.image)}" alt=""></div>
+            <div>
+              <p class="eyebrow">${esc(formatLabel(r.product))}</p>
+              <p class="alt-name">${esc(r.product.name)}</p>
+            </div>
+          </div>
           <p class="notes">${esc(r.product.notes.join(' · '))}</p>
           <ul class="why">${r.reasons.slice(0, 2).map((t) => `<li>${esc(t)}</li>`).join('')}</ul>
           ${scales(r.product.taste)}
@@ -183,11 +189,15 @@
     fitResult(el);
   }
 
-  // Длинное название + длинные причины могут не влезть — ужимаем по ступенькам
+  // Фото пачки — самое крупное, какое влезает; если и на минимуме не влезло — ужимаем текст
   function fitResult(el) {
-    for (const level of ['tight', 'tighter']) {
-      if (el.scrollHeight <= el.clientHeight + 1) return;
-      el.classList.add(level);
+    const fits = () => el.scrollHeight <= el.clientHeight + 1;
+    for (const level of ['', 'tight', 'tighter']) {
+      if (level) el.classList.add(level);
+      for (let t = 24; t >= 14; t -= 1) {
+        el.style.setProperty('--tile', `${t}rem`);
+        if (fits()) return;
+      }
     }
   }
 
