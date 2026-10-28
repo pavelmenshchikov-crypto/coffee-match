@@ -62,18 +62,20 @@ vec3 sphere(vec2 p, float t, float grow) {
   float R = 470.0;
   float ty0 = (p.y - (c.y - R)) / (2.0 * R);
   float flame = 1.0 - smoothstep(0.32, 0.92, ty0);          // 1 вверху, 0 у основания
-  vec2 q = p / 330.0;
-  float n1 = fbm(q + vec2(0.0, t * 0.14));
-  float n2 = fbm(q * 1.25 + vec2(4.7, t * 0.18));
-  vec2 warp = vec2(n1, n2) * 55.0 * flame;
-  warp.y -= 10.0 * flame * (0.5 + 0.5 * sin(t * 0.5));
+  vec2 q = p / 300.0;
+  float n1 = fbm(q + vec2(0.0, t * 0.34));
+  float n2 = fbm(q * 1.3 + vec2(4.7, t * 0.42));
+  float n3 = fbm(vec2(p.x / 260.0, t * 0.45));          // широкие «языки» по верхнему краю
+  vec2 warp = vec2(n1 * 1.2, n2) * 110.0 * flame;
+  warp.y += n3 * 110.0 * flame * flame;                // верх тянется вверх и опадает
+  warp.y -= 22.0 * flame * (0.5 + 0.5 * sin(t * 0.9));
   vec2 pw = c + (p + warp - c) / grow;
-  float Rb = R + 5.0 * sin(t * 0.5);
+  float Rb = R + 10.0 * sin(t * 0.8);
   float d = length(pw - c) - Rb;
   float ty = (pw.y - (c.y - Rb)) / (2.0 * Rb);
   float blur = 100.0 * clamp((1.0 - ty) / (1.0 - 0.406), 0.0, 1.0) + 160.0 * (grow - 1.0);
   float a = cover(d * grow, max(blur, 1.0));
-  vec3 col = sphereGrad(ty + 0.03 * n1 * flame);
+  vec3 col = sphereGrad(ty + 0.06 * n1 * flame) * (1.0 + 0.05 * n2 * flame);
   return mix(BG, col, a);
 }
 
@@ -95,11 +97,11 @@ vec3 boom(vec2 p, float k) {
 // Живой градиент: картинка из Photoshop + медленная деформация шумом
 vec3 living(vec2 p, float t) {
   vec2 uv = p / vec2(1024.0, 1366.0);
-  vec2 w = vec2(fbm(uv * 2.0 + vec2(t * 0.035, 0.0)), fbm(uv * 2.0 + vec2(7.3, -t * 0.03)));
-  vec2 w2 = vec2(fbm(uv * 3.1 - vec2(0.0, t * 0.025) + 3.1), fbm(uv * 3.1 + vec2(t * 0.02, 9.2)));
-  uv += w * 0.10 + w2 * 0.04;
+  vec2 w = vec2(fbm(uv * 1.8 + vec2(t * 0.09, 0.0)), fbm(uv * 1.8 + vec2(7.3, -t * 0.08)));
+  vec2 w2 = vec2(fbm(uv * 3.1 - vec2(0.0, t * 0.07) + 3.1), fbm(uv * 3.1 + vec2(t * 0.06, 9.2)));
+  uv += w * 0.20 + w2 * 0.07 + vec2(sin(t * 0.13), cos(t * 0.11)) * 0.04;
   uv = clamp(uv, 0.002, 0.998);
-  return texture2D(u_tex, uv).rgb;
+  return texture2D(u_tex, uv).rgb * (1.0 + 0.05 * fbm(uv * 1.5 + t * 0.1));
 }
 
 void main() {

@@ -12,6 +12,7 @@
      milk       0–3, насколько хорошо с молоком
      adventure  1 — понятный, 2 — интересный, 3 — экспериментальный лот
      image      фото пачки для экрана результата (assets/products/)
+     onBar      true — товар есть на стенде; остальные выключены, их можно включить в админке
    ===================================================================== */
 
 window.TM_PRODUCTS = [
@@ -50,6 +51,7 @@ window.TM_PRODUCTS = [
   },
   {
     id: 'colombia-guava-banana',
+    onBar: true,
     name: 'Colombia Guava Banana',
     format: 'beans', roast: 'filter',
     notes: ['Guava', 'Tamarind', 'Raspberry'],
@@ -72,6 +74,7 @@ window.TM_PRODUCTS = [
   },
   {
     id: 'kenya-gititu',
+    onBar: true,
     name: 'Kenya AB Gititu #007',
     format: 'beans', roast: 'filter',
     notes: ['Rhubarb', 'Black Tea', 'Jostaberry'],
@@ -83,6 +86,7 @@ window.TM_PRODUCTS = [
   },
   {
     id: 'ethiopia-kello-siko',
+    onBar: true,
     name: 'Ethiopia Kello Siko #3',
     format: 'beans', roast: 'filter',
     notes: ['Apricot', 'Wild Strawberry', 'Florals'],
@@ -160,6 +164,7 @@ window.TM_PRODUCTS = [
   },
   {
     id: 'geisha-drip',
+    onBar: true,
     name: 'Peru Dreyde Perez Geisha Drip',
     format: 'drip',
     notes: ['Plums', 'Dark Cherry', 'Bergamot'],
@@ -171,6 +176,7 @@ window.TM_PRODUCTS = [
   },
   {
     id: 'rocket-flower-drip',
+    onBar: true,
     name: 'Colombia Rocket Flower Drip',
     format: 'drip',
     notes: ['Osmanthus', 'White Peach', 'Earl Grey'],
@@ -206,8 +212,8 @@ window.TM_PRODUCTS = [
 
 /* Подпись формата на карточке результата */
 window.TM_FORMAT_LABEL = {
-  'beans:espresso': 'Whole beans · Espresso roast',
-  'beans:filter': 'Whole beans · Filter roast',
+  'beans:espresso': 'Whole beans 250 g · Espresso roast',
+  'beans:filter': 'Whole beans 250 g · Filter roast',
   'capsules': 'Capsules · Nespresso® Original',
   'drip': 'Drip bag · Single serve',
   'can': 'Can · Nitro cold brew'
@@ -250,6 +256,8 @@ window.TM_DETAILS = {
      title     строки заголовка (перенос внутри строки — автоматически)
      helper    подсказка над заголовком
      skipIf    вопрос пропускается, если функция вернула true
+     needs     вопрос/вариант показывается, только если такой товар есть на баре:
+               'decaf' или формат 'capsules' | 'can' | 'drip' | 'beans'
    ===================================================================== */
 
 const onlyCans = (a) => Array.isArray(a.brew) && a.brew.length > 0 && a.brew.every((v) => v === 'cold');
@@ -275,11 +283,11 @@ window.TM_QUESTIONS = [
     title: ['How do you make your coffee?'],
     options: [
       { value: 'espresso', label: 'Espresso machine', note: 'At home or in the office' },
-      { value: 'capsules', label: 'Nespresso®', note: 'Original line machine' },
+      { value: 'capsules', label: 'Nespresso®', note: 'Original line machine', needs: 'capsules' },
       { value: 'nogear', label: 'No gear at all', note: 'Office, travel, camping' },
       { value: 'filter', label: 'Filter', note: 'V60, Chemex, AeroPress' },
       { value: 'moka', label: 'Moka pot / French press', note: 'Stovetop or plunger' },
-      { value: 'cold', label: 'I want a cold one now', note: 'Ready-to-drink cans' }
+      { value: 'cold', label: 'I want a cold one now', note: 'Ready-to-drink cans', needs: 'can' }
     ]
   },
   {
@@ -299,8 +307,7 @@ window.TM_QUESTIONS = [
     id: 'flavour',
     layout: 'images',
     type: 'multi',
-    max: 2,
-    helper: 'Pick up to two. We’ll match them to the tasting notes.',
+    helper: 'Pick as many as you like. We’ll match them to the tasting notes.',
     title: ['Which flavours pull you in?'],
     options: [
       { value: 'choc', label: 'Chocolate, nuts, caramel', image: 'assets/flavours/chocolate.jpg' },
@@ -326,6 +333,7 @@ window.TM_QUESTIONS = [
     layout: 'rows',
     type: 'single',
     skipIf: onlyCans,
+    needs: 'decaf',
     helper: 'Our decaf doesn’t taste like a compromise.',
     title: ['Caffeine', 'or decaf?'],
     options: [
