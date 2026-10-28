@@ -214,10 +214,41 @@ window.TM_FORMAT_LABEL = {
 };
 
 /* =====================================================================
+   ЭКРАН РЕЗУЛЬТАТА — заголовок в две строки и таблица характеристик
+     title      [крупная строка, вторая строка]
+     roast …    значения для таблицы; '—' если на сайте нет данных
+   ===================================================================== */
+
+window.TM_DETAILS = {
+  'office-blend': { title: ['Office', 'Blend'], roast: 'Espresso', process: 'Seasonal blend', variety: '—', origin: 'Changes with the season', farm: 'Secret blend', altitude: '—' },
+  'brazil-monteiro-lobato': { title: ['Brazil', 'Monteiro Lobato'], roast: 'Espresso', process: 'Natural', variety: 'Bourbon, Mundo Novo, Catuaí', origin: 'Brazil (Rio Pardo)', farm: 'Fazenda Pinheiro', altitude: '800–900 masl' },
+  'colombia-condor-decaf': { title: ['Colombia', 'Condor Decaf'], roast: 'Espresso', process: 'Natural + sugarcane decaf', variety: 'Red & Yellow Caturra', origin: 'Colombia (Tolima)', farm: 'El Vergel', altitude: '—' },
+  'colombia-guava-banana': { title: ['Colombia', 'Guava Banana'], roast: 'Filter', process: 'Anaerobic natural', variety: 'Red & Yellow Caturra', origin: 'Colombia (Tolima)', farm: 'El Vergel Estate', altitude: '—' },
+  'ethiopia-kebena': { title: ['Ethiopia', 'Kebena'], roast: 'Espresso', process: 'Washed', variety: 'Heirloom', origin: 'Ethiopia (Limu Kossa, Jimma)', farm: 'Kebena Estate', altitude: '1,865–2,090 masl' },
+  'kenya-gititu': { title: ['Kenya', 'AB Gititu #007'], roast: 'Filter', process: 'Washed', variety: 'SL28, SL34, Ruiru, Batian', origin: 'Kenya (Nyeri)', farm: 'Gititu Factory', altitude: '—' },
+  'ethiopia-kello-siko': { title: ['Ethiopia', 'Kello Siko #3'], roast: 'Filter', process: 'Washed', variety: 'Heirloom', origin: 'Ethiopia (Guji, Oromia)', farm: 'Siko Station', altitude: '2,100–2,250 masl' },
+  'el-salvador-rufatti': { title: ['El Salvador', 'Rodolfo Rufatti'], roast: 'Espresso', process: 'Natural, 72h cherry maceration', variety: 'Hybrids, Red Bourbon', origin: 'El Salvador (Santa Ana)', farm: 'Finca Guanacaste', altitude: '1,000 masl' },
+  'condor-decaf-capsules': { title: ['Colombia', 'Condor Decaf Capsules'], roast: 'Espresso', process: 'Natural + sugarcane decaf', variety: 'Caturra', origin: 'Colombia', farm: 'El Vergel', altitude: '—' },
+  'bubble-gum-capsules': { title: ['Colombia', 'Bubble Gum Capsules'], roast: 'Espresso', process: 'Anoxic natural', variety: 'Caturra, Colombia', origin: 'Colombia', farm: 'Jardines Chambaku', altitude: '—' },
+  'brazil-monteiro-capsules': { title: ['Brazil', 'Monteiro Capsules'], roast: 'Espresso', process: 'Natural', variety: 'Bourbon, Mundo Novo, Catuaí', origin: 'Brazil', farm: 'Fazenda Pinheiro', altitude: '800–900 masl' },
+  'rocket-flower-capsules': { title: ['Colombia', 'Rocket Flower Capsules'], roast: 'Espresso', process: 'Washed, controlled fermentation', variety: 'Caturra', origin: 'Colombia', farm: 'Finca El Paseo', altitude: '1,750–1,950 masl' },
+  'decaf-drip': { title: ['Colombia', 'Decaf Drip'], roast: 'Filter', process: 'Natural + sugarcane decaf', variety: 'Red & Yellow Caturra', origin: 'Colombia', farm: 'El Vergel Estate', altitude: '—' },
+  'geisha-drip': { title: ['Peru', 'Dreyde Perez Geisha Drip'], roast: 'Filter', process: 'Anoxic washed with mosto', variety: 'Geisha', origin: 'Peru', farm: 'Finca La Ponderosa', altitude: '1,960 masl' },
+  'rocket-flower-drip': { title: ['Colombia', 'Rocket Flower Drip'], roast: 'Filter', process: 'Mosto-fermented washed', variety: 'Caturra', origin: 'Colombia', farm: 'Finca El Paseo', altitude: '1,750–1,950 masl' },
+  'nitro-black': { title: ['Nitro', 'Cold Brew Black'], roast: 'Cold brew', process: 'Washed', variety: 'Heirloom', origin: 'Ethiopia (Limu Kossa)', farm: 'Kebena Estate', altitude: '1,865–2,090 masl' },
+  'nitro-blood-orange': { title: ['Nitro', 'Blood Orange & Grapefruit'], roast: 'Cold brew', process: 'Flavoured cold brew', variety: '—', origin: 'Brazil', farm: '—', altitude: '—' }
+};
+
+/* =====================================================================
    ВОПРОСЫ
+     layout    rows   — плашки во всю ширину (иконка, название, описание — всё опционально)
+               grid   — две колонки: название + подпись
+               images — 2×2 карточки с фото и подписью
      type      single — выбор сразу ведёт дальше
-               multi  — можно выбрать несколько, дальше по кнопке
+               multi  — можно выбрать несколько, дальше по кнопке Next
      max       для multi: сколько вариантов можно выбрать
+     title     строки заголовка (перенос внутри строки — автоматически)
+     helper    подсказка над заголовком
      skipIf    вопрос пропускается, если функция вернула true
    ===================================================================== */
 
@@ -226,69 +257,88 @@ const onlyCans = (a) => Array.isArray(a.brew) && a.brew.length > 0 && a.brew.eve
 window.TM_QUESTIONS = [
   {
     id: 'level',
-    title: 'How deep are you into specialty coffee?',
+    layout: 'rows',
     type: 'single',
+    helper: 'So we know how adventurous to go with your pick.',
+    title: ['Your specialty', 'coffee level?'],
     options: [
-      { value: 'beginner', label: 'Just getting started', sub: 'Coffee is coffee — show me the good stuff' },
-      { value: 'regular', label: 'I drink it now and then', sub: 'I know my flat white from my latte' },
-      { value: 'nerd', label: 'Every day. I’m a coffee nerd', sub: 'Washed, natural, anaerobic — bring it on' }
+      { value: 'beginner', label: 'Rookie', note: 'Getting started. Coffee is coffee — show me the good.', icon: 'assets/icons/level-rookie.svg' },
+      { value: 'regular', label: 'Hooked', note: 'I drink it now and then. I know my flat white from my latte.', icon: 'assets/icons/level-hooked.svg' },
+      { value: 'nerd', label: 'Nerd', note: 'Every day. Washed, natural, anaerobic — bring it on.', icon: 'assets/icons/level-nerd.svg' }
     ]
   },
   {
     id: 'brew',
-    title: 'How do you make your coffee?',
+    layout: 'grid',
     type: 'multi',
+    helper: 'Pick all that apply. We’ll match the roast and format to your gear.',
+    title: ['How do you make your coffee?'],
     options: [
-      { value: 'espresso', label: 'Espresso machine' },
-      { value: 'capsules', label: 'Nespresso® capsules', sub: 'Original line machine' },
-      { value: 'filter', label: 'Filter', sub: 'V60, Chemex, AeroPress' },
-      { value: 'moka', label: 'Moka pot or French press' },
-      { value: 'nogear', label: 'No gear at all', sub: 'Office, travel, camping' },
-      { value: 'cold', label: 'I want a cold one now', sub: 'Ready-to-drink cans' }
+      { value: 'espresso', label: 'Espresso machine', note: 'At home or in the office' },
+      { value: 'capsules', label: 'Nespresso®', note: 'Original line machine' },
+      { value: 'nogear', label: 'No gear at all', note: 'Office, travel, camping' },
+      { value: 'filter', label: 'Filter', note: 'V60, Chemex, AeroPress' },
+      { value: 'moka', label: 'Moka pot / French press', note: 'Stovetop or plunger' },
+      { value: 'cold', label: 'I want a cold one now', note: 'Ready-to-drink cans' }
     ]
   },
   {
     id: 'milk',
-    title: 'Milk or black?',
+    layout: 'rows',
     type: 'single',
     skipIf: onlyCans,
+    helper: 'Some coffees shine with milk, others are best black.',
+    title: ['Milk', 'or', 'no milk?'],
     options: [
+      { value: 'milk', label: 'Usually with milk' },
       { value: 'black', label: 'Black, always' },
-      { value: 'milk', label: 'With milk', sub: 'Flat white, cappuccino, latte' },
       { value: 'both', label: 'Depends on the mood' }
     ]
   },
   {
     id: 'flavour',
-    title: 'Which flavours pull you in?',
+    layout: 'images',
     type: 'multi',
     max: 2,
+    helper: 'Pick up to two. We’ll match them to the tasting notes.',
+    title: ['Which flavours pull you in?'],
     options: [
-      { value: 'choc', label: 'Chocolate, nuts, caramel' },
-      { value: 'fruit', label: 'Berries & ripe fruit' },
-      { value: 'floral', label: 'Florals, tea, citrus' },
-      { value: 'wild', label: 'Something wild', sub: 'Fermented, winey, tropical' }
+      { value: 'choc', label: 'Chocolate, nuts, caramel', image: 'assets/flavours/chocolate.jpg' },
+      { value: 'fruit', label: 'Berries & ripe fruit', image: 'assets/flavours/berries.jpg' },
+      { value: 'floral', label: 'Florals, tea, citrus', image: 'assets/flavours/florals.jpg' },
+      { value: 'wild', label: 'Something wild', image: 'assets/flavours/wild.jpg' }
     ]
   },
   {
     id: 'acidity',
-    title: 'How do you feel about acidity?',
+    layout: 'rows',
     type: 'single',
+    helper: 'From smooth and round to bright and juicy.',
+    title: ['How about', 'acidity?'],
     options: [
-      { value: 'low', label: 'Not my thing', sub: 'Smooth, round, low acidity' },
-      { value: 'mid', label: 'A little is nice', sub: 'Balanced and sweet' },
-      { value: 'high', label: 'The brighter, the better', sub: 'Juicy, citrusy, sparkling' }
+      { value: 'low', label: 'Not my thing', note: 'Smooth, round, low acidity.' },
+      { value: 'mid', label: 'A little is nice', note: 'Balanced and sweet.' },
+      { value: 'high', label: 'The brighter, the better', note: 'Juicy, citrusy, sparkling.' }
     ]
   },
   {
     id: 'caffeine',
-    title: 'Caffeine?',
+    layout: 'rows',
     type: 'single',
     skipIf: onlyCans,
+    helper: 'Our decaf doesn’t taste like a compromise.',
+    title: ['Caffeine', 'or decaf?'],
     options: [
-      { value: 'yes', label: 'Yes, please' },
+      { value: 'yes', label: 'Caffeine, please' },
       { value: 'decaf', label: 'Decaf only' },
       { value: 'any', label: 'Doesn’t matter' }
     ]
   }
 ];
+
+/* Экран загрузки перед результатом: строки появляются по очереди с галочкой */
+window.TM_LOADING = {
+  helper: 'Hold on, this takes a few seconds.',
+  title: ['Brewing', 'your match'],
+  steps: ['Reading your answers', 'Matching roast and format', 'Balancing acidity and flavour', 'Checking what’s on the bar']
+};
