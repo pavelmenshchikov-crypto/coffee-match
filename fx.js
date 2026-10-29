@@ -134,6 +134,9 @@ void main() {
     vec3 c = mix(sphere(p, t, grow), boom(p, k), a);
     col = mix(c, living(p, t), b);
   }
+  // Сверху фон мягко уходит в тёмный: статус-бар iPad iOS красит один раз при запуске (#220700),
+  // и так он перетекает в градиент квиза без линии. На старте верх и так тёмный
+  col = mix(BG, col, smoothstep(0.0, 190.0, p.y));
   col += (grain(frag + fract(t) * 91.7) - 0.5) / 255.0;   // против полос на градиентах
   gl_FragColor = vec4(col, 1.0);
 }`;
