@@ -512,6 +512,7 @@
     if (map[p.id] === Boolean(p.onBar)) delete map[p.id];
     saveBar(map);
     t.classList.toggle('on');
+    renderJumps();
   });
   // Строка для диагностики на iPad: какая версия реально запущена и какие размеры видит страница
   async function renderAdminInfo() {
@@ -520,8 +521,43 @@
     const fs = (document.fullscreenEnabled || document.webkitFullscreenEnabled) ? 'available' : 'unavailable';
     $('#admin-info').textContent = `${ver || 'no offline cache yet'} · ${mode} · screen ${screen.width}×${screen.height} · window ${innerWidth}×${innerHeight} · page ${getComputedStyle(document.documentElement).getPropertyValue('--app-h') || '—'} · fullscreen ${fs}`;
   }
-  $('#admin-all').addEventListener('click', () => { saveBar({}); renderAdmin(); });
+  $('#admin-all').addEventListener('click', () => { saveBar({}); renderAdmin(); renderJumps(); });
   $('#admin-close').addEventListener('click', () => { admin.hidden = true; });
+  $('#admin-x').addEventListener('click', () => { admin.hidden = true; });
+
+  // Прыжок на любой экран: проверить каждый вопрос и каждый результат, не проходя квиз заново
+  const jumpList = $('#admin-jump');
+  function renderJumps() {
+    const qs = visibleQuestions();
+    const chip = (go, label, cls = '') => `<button class="jump${cls}" type="button" data-go="${esc(go)}"><span class="t-btn">${esc(label)}</span></button>`;
+    jumpList.innerHTML = qs.map((q, i) => chip('q:' + i, `${i + 1} · ${q.id[0].toUpperCase() + q.id.slice(1)}`)).join('') +
+      chip('loading', 'Loading') +
+      barProducts().map((p) => chip('result:' + p.id, (DETAILS[p.id] || { title: [p.name] }).title.slice(-1)[0], ' res')).join('');
+  }
+  jumpList.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-go]');
+    if (!b || busy || state.screen !== 'intro') return;
+    admin.hidden = true;
+    const [kind, arg] = b.dataset.go.split(':');
+    for (const el of [intro, ghost, hand]) el.classList.add('hidden');
+    document.body.classList.add('boomed');
+    FX.animateBoom(1, 600);
+    barsOn = 0;
+    stage.hidden = false;
+    stage.classList.remove('leave');
+    stage.classList.add('enter');
+    state = { screen: 'question', step: kind === 'q' ? Number(arg) : 0, answers: {}, result: null };
+    if (kind === 'q') renderQuestion();
+    else if (kind === 'loading') renderLoading();
+    else {
+      const p = PRODUCTS.find((x) => x.id === arg);
+      state.step = visibleQuestions().length - 1;
+      state.result = { product: p };
+      shareFile = null;
+      makeShareFile(p).then((f) => { shareFile = f; }).catch(() => {});
+      renderResult();
+    }
+  });
   $('#idle-stay').addEventListener('click', stopCountdown);
 
   let taps = [];
@@ -529,7 +565,7 @@
     e.stopPropagation();
     const now = Date.now();
     taps = taps.filter((t) => now - t < 2500).concat(now);
-    if (taps.length >= 5) { taps = []; renderAdmin(); renderAdminInfo(); admin.hidden = false; }
+    if (taps.length >= 5) { taps = []; renderAdmin(); renderJumps(); renderAdminInfo(); admin.hidden = false; }
   });
 
   intro.addEventListener('click', explode);
@@ -542,17 +578,7 @@
   document.addEventListener('contextmenu', (e) => e.preventDefault());
   document.addEventListener('gesturestart', (e) => e.preventDefault());
 
-  // iPad, иконка на экране «Домой»: iOS отдаёт высоту окна без статус-бара, хотя рисует страницу от самого верха,
-  // и снизу остаётся тёмная полоса. Растягиваем всё на настоящую высоту экрана (всё полноэкранное считается от верха)
   const isStandalone = () => navigator.standalone === true || matchMedia('(display-mode: standalone)').matches;
-  function fitScreen() {
-    const gap = screen.height - innerHeight;
-    const root = document.documentElement.style;
-    if (isStandalone() && gap >= 0 && gap <= 80 && !document.fullscreenElement && !document.webkitFullscreenElement) root.setProperty('--app-h', screen.height + 'px');
-    else root.removeProperty('--app-h');
-  }
-  fitScreen();
-  addEventListener('resize', fitScreen);
 
   // Прогреваем картинки, чтобы на iPad ничего не мигало
   [...QUESTIONS.flatMap((q) => q.options.map((o) => o.image || o.icon)).filter(Boolean), ...PRODUCTS.map((p) => p.image)]

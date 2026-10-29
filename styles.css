@@ -288,6 +288,11 @@ body.no-gl.boomed { background: url('assets/bg/gradient.png') center / cover; }
 .qr-col svg { width: 100%; aspect-ratio: 1; display: block; }
 .qr-col .t-key { white-space: nowrap; }
 .admin-info { color: #8a8a8a; line-height: 1.4; }
+.admin-head { display: flex; justify-content: space-between; align-items: center; }
+.admin-jump { display: flex; flex-direction: column; gap: 1rem; }
+.jump-list { display: flex; flex-wrap: wrap; gap: 0.625rem; }
+.jump { padding: 0.875rem 1.25rem; border-radius: var(--radius-control); background: var(--gray); }
+.jump.res { background: var(--yellow); }
 
 /* ---------- оверлеи ---------- */
 
@@ -322,7 +327,7 @@ body.no-gl.boomed { background: url('assets/bg/gradient.png') center / cover; }
 .qr-code { width: 20rem; height: 20rem; background: #fff; border-radius: var(--radius-card); padding: 1.25rem; }
 .qr-code svg { width: 100%; height: 100%; display: block; }
 
-.sheet-admin { width: 100%; height: 100%; }
+.sheet-admin { width: 100%; height: calc(var(--app-h) - 2 * var(--pad)); }   /* ровно в экран: список прокручивается, кнопки всегда видны */
 .admin-list { flex: 1; min-height: 0; overflow-y: auto; -webkit-overflow-scrolling: touch; touch-action: pan-y; display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; align-content: start; }
 .toggle { display: flex; flex-direction: column; gap: 0.625rem; padding: 1.25rem 1.5rem; border: var(--border) solid var(--gray); border-radius: var(--radius-card); color: rgba(20, 20, 20, 0.45); transition: background 200ms, color 200ms, border-color 200ms; }
 .toggle.on { background: var(--black); border-color: var(--black); color: var(--white); }

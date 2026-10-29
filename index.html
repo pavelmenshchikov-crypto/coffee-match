@@ -8,7 +8,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-title" content="Coffee Match">
-  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black">
   <meta name="format-detection" content="telephone=no">
   <link rel="manifest" href="manifest.webmanifest">
   <link rel="apple-touch-icon" href="assets/icons/home-icon-180.png">
@@ -56,9 +56,16 @@
 
   <div class="overlay" id="admin" hidden>
     <div class="sheet sheet-admin">
-      <p class="t-body">Staff only</p>
+      <div class="admin-head">
+        <p class="t-body">Staff only</p>
+        <button class="btn" id="admin-x" type="button"><span class="t-btn">Close</span></button>
+      </div>
       <h2 class="t-title">What’s on the bar</h2>
       <p class="t-body">Black = on the bar. Only these get recommended. «Festival set» brings back the default lineup. Saved on this iPad.</p>
+      <div class="admin-jump">
+        <p class="t-key">Jump to a screen</p>
+        <div class="jump-list" id="admin-jump"></div>
+      </div>
       <div class="admin-list" id="admin-list"></div>
       <p class="t-cap admin-info" id="admin-info"></p>
       <div class="sheet-actions">
