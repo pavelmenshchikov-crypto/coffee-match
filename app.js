@@ -584,6 +584,11 @@
   [...QUESTIONS.flatMap((q) => q.options.map((o) => o.image || o.icon)).filter(Boolean), ...PRODUCTS.map((p) => p.image)]
     .forEach((src) => { new Image().src = src; });
 
+  // На iPad статус-бар над страницей красится цветом theme-color — ведём его за верхним краем фона,
+  // чтобы над страницей не было полосы: тёмный на старте, цвет живого градиента в квизе
+  const themeMeta = $('meta[name="theme-color"]');
+  FX.onTopColor = (rgb) => themeMeta.setAttribute('content', '#' + rgb.map((v) => v.toString(16).padStart(2, '0')).join(''));
+
   FX.init($('#fx'), 'assets/bg/gradient.png').then((ok) => { if (!ok) document.body.classList.add('no-gl'); })
     .catch(() => document.body.classList.add('no-gl'));
 

@@ -143,6 +143,7 @@ void main() {
     boom: 0,
     frozen: false,
     _anim: null,
+    onTopColor: null,   // (rgb) => …: средний цвет верхнего края картинки, когда он заметно меняется
 
     async init(canvas, textureUrl) {
       const debug = /[?&]debug/.test(location.search);
@@ -189,6 +190,7 @@ void main() {
       window.addEventListener('resize', resize);
 
       const t0 = performance.now();
+      let sampledAt = 0;
       const frame = (now) => {
         if (!this.ok) return;
         if (this.frozen) { requestAnimationFrame(frame); return; }
@@ -196,10 +198,25 @@ void main() {
         gl.uniform1f(u.u_time, (now - t0) / 1000);
         gl.uniform1f(u.u_boom, this.boom);
         gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
+        if (this.onTopColor && now - sampledAt > (this._anim ? 100 : 400)) { sampledAt = now; this._sampleTop(); }
         requestAnimationFrame(frame);
       };
       requestAnimationFrame(frame);
       return true;
+    },
+
+    // Верхняя строка картинки, усреднённая по ширине. Читаем сразу после отрисовки — буфер ещё не очищен
+    _sampleTop() {
+      const gl = this.gl, w = gl.drawingBufferWidth, h = gl.drawingBufferHeight;
+      const px = new Uint8Array(w * 4);
+      gl.readPixels(0, h - 1, w, 1, gl.RGBA, gl.UNSIGNED_BYTE, px);
+      const rgb = [0, 0, 0];
+      for (let i = 0; i < px.length; i += 4) { rgb[0] += px[i]; rgb[1] += px[i + 1]; rgb[2] += px[i + 2]; }
+      const top = rgb.map((v) => Math.round(v / w));
+      const last = this._top;
+      if (last && Math.max(...top.map((v, i) => Math.abs(v - last[i]))) < 3) return;
+      this._top = top;
+      this.onTopColor(top);
     },
 
     // Для записи видео (?debug): рисуем кадр на заданное время, живой цикл при этом стоит
