@@ -24,7 +24,6 @@ uniform float u_scale;
 uniform vec2 u_off;
 uniform float u_time;
 uniform float u_boom;
-uniform float u_variant;
 uniform sampler2D u_tex;
 
 const vec3 BG = vec3(34.0, 7.0, 0.0) / 255.0;
@@ -58,47 +57,24 @@ vec3 sphereGrad(float t) {
 }
 
 // Сфера: центр (512, 873), диаметр 940. grow > 1 — сфера раздувается при взрыве.
-// u_variant — характер движения: 0 Wave, 1 Side flames, 2 Molten, 3 Breathe, 4 Blend (между Molten и Breathe)
+// Движение — смесь двух характеров: край медленно плавится и внутри перетекают цвета (вес M),
+// сфера дышит размером, блюром и границей цвета (вес B)
 vec3 sphere(vec2 p, float t, float grow) {
   vec2 c = vec2(512.0, 873.0);
   float R = 470.0;
   float ty0 = (p.y - (c.y - R)) / (2.0 * R);
-  float upper = 1.0 - smoothstep(0.25, 0.95, ty0);       // 1 вверху, 0 у основания
-  vec2 warp = vec2(0.0);
-  float rOff = 0.0;       // смещение края наружу, px
-  float tShift = 0.0;     // сдвиг по градиенту цвета
-  float blurK = 1.0;      // множитель прогрессивного блюра
-  float Rb = R;
+  const float M = 0.5;
+  const float B = 0.7;
+  float ang = atan(p.y - c.y, p.x - c.x);
+  float base = smoothstep(0.62, 1.0, ty0);                // основание почти не плавится
+  float rOff = M * (1.0 - 0.85 * base) * (18.0 * sin(ang * 3.0 + t * 0.6) + 10.0 * sin(ang * 5.0 - t * 0.85) + 5.0 * sin(ang * 7.0 + t * 1.15));
+  float Rb = R * (1.0 + B * 0.025 * sin(t * 1.1));
+  float blurK = 1.0 + B * 0.45 * sin(t * 1.1 + 0.9);      // множитель прогрессивного блюра
+  // сдвиг по градиенту цвета: крупные мягкие потоки внутри + общее дыхание границы
+  float tShift = M * (0.12 * noise(p / 420.0 + vec2(t * 0.12, -t * 0.16)) + 0.06 * noise(p / 260.0 - vec2(t * 0.09, t * 0.07)))
+               + B * (0.09 * sin(t * 0.8) + 0.03 * sin(t * 1.9));
 
-  if (u_variant < 0.5) {
-    // Wave: марево — край волнится горизонтальными волнами, которые бегут вверх
-    warp.x = upper * (24.0 * sin(p.y / 64.0 - t * 1.5) + 11.0 * sin(p.y / 29.0 - t * 2.4 + 1.7));
-    warp.y = upper * 8.0 * sin(p.x / 95.0 + t * 1.0);
-    tShift = 0.025 * upper * sin(p.y / 85.0 - t * 1.3);
-  } else if (u_variant < 1.5) {
-    // Side flames: мягкие языки ползут вверх только по бокам; верх и основание спокойные
-    float ax = (p.x - c.x) / R;
-    float side = smoothstep(0.55, 0.95, abs(ax)) * smoothstep(0.05, 0.25, ty0) * (1.0 - smoothstep(0.55, 0.8, ty0));
-    float f = noise(vec2(p.x / 95.0, p.y / 240.0 + t * 0.8)) + 0.5 * noise(vec2(p.x / 47.0, p.y / 120.0 + t * 1.3));
-    rOff = side * smoothstep(-0.1, 0.6, f) * 90.0;
-    blurK = 1.0 + side * 0.8;
-    tShift = -0.05 * side;
-  } else {
-    // Molten (2), Breathe (3), Blend (4) — одна модель с весами:
-    // m — край медленно плавится и внутри перетекают цвета, b — сфера дышит размером, блюром и границей цвета
-    float m = u_variant < 2.5 ? 1.0 : (u_variant < 3.5 ? 0.0 : 0.5);
-    float b = u_variant < 2.5 ? 0.0 : (u_variant < 3.5 ? 1.0 : 0.7);
-    float ang = atan(p.y - c.y, p.x - c.x);
-    float base = smoothstep(0.62, 1.0, ty0);
-    rOff = m * (1.0 - 0.85 * base) * (18.0 * sin(ang * 3.0 + t * 0.6) + 10.0 * sin(ang * 5.0 - t * 0.85) + 5.0 * sin(ang * 7.0 + t * 1.15));
-    Rb = R * (1.0 + b * 0.025 * sin(t * 1.1));
-    blurK = 1.0 + b * 0.45 * sin(t * 1.1 + 0.9);
-    // крупные мягкие потоки цвета внутри — без мелкой пятнистости
-    tShift = m * (0.12 * noise(p / 420.0 + vec2(t * 0.12, -t * 0.16)) + 0.06 * noise(p / 260.0 - vec2(t * 0.09, t * 0.07)))
-           + b * (0.09 * sin(t * 0.8) + 0.03 * sin(t * 1.9));
-  }
-
-  vec2 pw = c + (p + warp - c) / grow;
+  vec2 pw = c + (p - c) / grow;
   float d = length(pw - c) - Rb - rOff;
   float ty = (pw.y - (c.y - Rb)) / (2.0 * Rb);
   float blur = 100.0 * blurK * clamp((1.0 - ty) / (1.0 - 0.406), 0.0, 1.0) + 160.0 * (grow - 1.0);
@@ -154,17 +130,10 @@ void main() {
   gl_FragColor = vec4(col, 1.0);
 }`;
 
-  // Вариант движения сферы: ?sphere=wave|flames|molten|breathe|blend, по умолчанию — DEFAULT_VARIANT
-  const VARIANTS = { wave: 0, flames: 1, molten: 2, breathe: 3, blend: 4 };
-  const DEFAULT_VARIANT = 'blend';
-  const fromUrl = (location.search.match(/[?&]sphere=(\w+)/) || [])[1];
-
   const FX = {
     ok: false,
     boom: 0,
     frozen: false,
-    variant: VARIANTS[fromUrl] ?? VARIANTS[DEFAULT_VARIANT],
-    VARIANTS,
     _anim: null,
 
     async init(canvas, textureUrl) {
@@ -192,9 +161,8 @@ void main() {
       gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGB, gl.RGB, gl.UNSIGNED_BYTE, img);
 
       const u = {};
-      for (const n of ['u_res', 'u_scale', 'u_off', 'u_time', 'u_boom', 'u_variant', 'u_tex']) u[n] = gl.getUniformLocation(prog, n);
+      for (const n of ['u_res', 'u_scale', 'u_off', 'u_time', 'u_boom', 'u_tex']) u[n] = gl.getUniformLocation(prog, n);
       gl.uniform1i(u.u_tex, 0);
-      gl.uniform1f(u.u_variant, this.variant);
 
       this.gl = gl; this.u = u; this.canvas = canvas; this.ok = true;
       canvas.addEventListener('webglcontextlost', (e) => { e.preventDefault(); this.ok = false; document.body.classList.add('no-gl'); });
@@ -232,10 +200,8 @@ void main() {
       const gl = this.gl, u = this.u;
       gl.uniform1f(u.u_time, time);
       gl.uniform1f(u.u_boom, boom);
-      gl.uniform1f(u.u_variant, this.variant);
       gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
     },
-    setVariant(v) { this.variant = v; if (this.ok) this.gl.uniform1f(this.u.u_variant, v); },
 
     // Плавно ведём boom к значению to за ms миллисекунд
     animateBoom(to, ms) {
