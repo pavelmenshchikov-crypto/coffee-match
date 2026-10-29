@@ -65,9 +65,21 @@
     for (const n of [el, ...el.children]) { n.style.animation = 'none'; void n.offsetWidth; n.style.animation = ''; }
   }
 
+  // Пробуем спрятать статус-бар iPad: полноэкранный режим браузер даёт включить только по нажатию.
+  // Только на тач-экранах — на компьютере во время правок это мешало бы
+  function goFullscreen() {
+    const el = document.documentElement;
+    if (!matchMedia('(pointer: coarse)').matches || document.fullscreenElement || document.webkitFullscreenElement) return;
+    try {
+      const r = (el.requestFullscreen || el.webkitRequestFullscreen)?.call(el);
+      if (r && r.catch) r.catch(() => {});
+    } catch (e) { /* не поддерживается — остаёмся как есть */ }
+  }
+
   async function explode() {
     if (busy || state.screen !== 'intro') return;
     busy = true;
+    goFullscreen();
     state = { screen: 'question', step: 0, answers: {}, result: null };
     hand.classList.add('gone');
     intro.classList.add('fading');
@@ -261,18 +273,27 @@
 
   const details = (p) => DETAILS[p.id] || { title: [p.name, ''], roast: '—', process: '—', variety: '—', origin: '—', farm: '—', altitude: '—' };
 
-  function qrMatrix(text) {
-    const qr = window.qrcode(0, 'M');
+  // QR со стрелкой The Miners в центре, как в макете. Уровень коррекции H переживает вырезанную середину
+  const ARROW_D = 'M25.9958 60H48.6373V38.5325H74.6331L37.3166 0L0 38.5325H25.9958V60Z';
+  const ARROW_W = 74.6331, ARROW_H = 60;
+  function qrModel(text) {
+    const qr = window.qrcode(0, 'H');
     qr.addData(text);
     qr.make();
-    return qr;
+    const n = qr.getModuleCount();
+    let hole = Math.round(n * 0.3);
+    if (hole % 2 === 0) hole += 1;
+    const h0 = (n - hole) / 2;
+    const inHole = (r, c) => r >= h0 && r < h0 + hole && c >= h0 && c < h0 + hole;
+    const w = hole - 2.4, h = w * ARROW_H / ARROW_W;
+    return { n, dark: (r, c) => qr.isDark(r, c) && !inHole(r, c), arrow: { x: (n - w) / 2, y: (n - h) / 2, w, h } };
   }
   function qrSvg(text) {
-    const qr = qrMatrix(text);
-    const n = qr.getModuleCount();
+    const q = qrModel(text), a = q.arrow;
     let path = '';
-    for (let r = 0; r < n; r++) for (let c = 0; c < n; c++) if (qr.isDark(r, c)) path += `M${c} ${r}h1v1h-1z`;
-    return `<svg viewBox="0 0 ${n} ${n}" shape-rendering="crispEdges"><path d="${path}" fill="#141414"/></svg>`;
+    for (let r = 0; r < q.n; r++) for (let c = 0; c < q.n; c++) if (q.dark(r, c)) path += `M${c} ${r}h1v1h-1z`;
+    return `<svg viewBox="0 0 ${q.n} ${q.n}"><path d="${path}" fill="#141414" shape-rendering="crispEdges"/>` +
+      `<path d="${ARROW_D}" fill="#141414" transform="translate(${a.x} ${a.y}) scale(${a.w / ARROW_W})"/></svg>`;
   }
 
   function renderResult() {
@@ -281,23 +302,25 @@
     const d = details(p);
     const total = visibleQuestions().length;
     order = 0;
-    const kv = (k, v) => `<div class="kv"><span class="t-label">${esc(k)}:</span><span class="v t-cap">${esc(v || '—')}</span></div>`;
+    const kv = (k, v, small) => `<div class="kv"><span class="t-key">${esc(k)}:</span><span class="v ${small ? 't-small' : 't-body'}">${esc(v || '—')}</span></div>`;
     const hr = '<div class="divider"></div>';
     const squares = (n) => `<span class="squares">${[1, 2, 3, 4, 5].map((i) => `<i class="${i <= n ? 'on' : ''}"></i>`).join('')}</span>`;
     const taste = `<div class="taste">${['acidity', 'bitterness', 'sweetness'].map((k) => `
-      <div class="taste-row">${squares(p.taste[k])}<span class="t-cap">${k[0].toUpperCase() + k.slice(1)}</span></div>`).join('')}</div>`;
+      <div class="taste-row">${squares(p.taste[k])}<span class="t-body">${k[0].toUpperCase() + k.slice(1)}</span></div>`).join('')}</div>`;
 
     const html = progress(total) + `
       <div class="res-body">
         <div ${a('res-meta')}><span class="t-body">Your match</span><span class="t-body">${esc(formatLabel(p))}</span></div>
         <div ${a('res-titles')}><h1 class="t-title">${esc(d.title[0])}</h1>${d.title[1] ? `<h2 class="t-h4">${esc(d.title[1])}</h2>` : ''}</div>
-        <div class="res-section">
-          <div ${a('res-image')}><img src="${esc(p.image)}" alt=""></div>
-          <div ${a('res-table')}>
-            <div class="col">${kv('Roast', d.roast)}${hr}${kv('Process', d.process)}${hr}${kv('Notes', p.notes.join(', '))}${hr}${kv('Variety', d.variety)}</div>
-            <div class="col">${kv('Origin', d.origin)}${hr}${kv('Farm', d.farm)}${hr}${kv('Altitude', d.altitude)}${hr}${taste}</div>
-            <div class="qr-col"><div class="qr-box">${qrSvg(p.url)}</div><span class="t-cap">Scan to open it<br>in our e-shop</span></div>
+        <div ${a('res-image')}><img src="${esc(p.image)}" alt=""></div>
+        <div ${a('res-table')}>
+          <div class="res-grid">
+            ${kv('Roast', d.roast)}${kv('Origin', d.origin)}${hr}${hr}
+            ${kv('Process', d.process)}${kv('Farm', d.farm)}${hr}${hr}
+            ${kv('Notes', p.notes.join(', '), true)}${kv('Altitude', d.altitude)}${hr}${hr}
+            ${kv('Variety', d.variety)}${taste}
           </div>
+          <div class="qr-col">${qrSvg(p.url)}<span class="t-key">Open in e-shop</span></div>
         </div>
       </div>
       <div ${a('actions')}><div class="group">${btn.back()}${btn.restart()}</div>
@@ -356,19 +379,40 @@
     x.textAlign = 'left'; x.fillText('Your match', L, y + 14);
     x.textAlign = 'right'; x.fillText(formatLabel(p), R, y + 14);
     x.textAlign = 'left';
-    y += 14 + 70;
+    y += 14 + 40;
 
     const fit = (text, weight, size) => { font(weight, size); while (x.measureText(text).width > CW && size > 20) { size -= 2; font(weight, size); } return size; };
     const t1 = d.title[0].toUpperCase(), t2 = (d.title[1] || '').toUpperCase();
     let s1 = fit(t1, 900, 96); x.fillText(t1, L, y + s1 * 0.72); y += s1 * 0.72 + 20;
     if (t2) { const s2 = fit(t2, 900, 48); x.fillText(t2, L, y + s2 * 0.72); y += s2 * 0.72; }
-    y += 70;
+    y += 40;
 
     // низ: подпись, выше — таблица, между — фото пачки
     const footY = 1246;
     font(500, 20); x.fillText('Coffee Match · The Miners', L, footY);
     x.textAlign = 'right'; x.fillText('theminers.eu', R, footY); x.textAlign = 'left';
-    const qrS = 180, tableH = qrS + 44, tableTop = footY - 14 - 60 - tableH;
+    // таблица: две колонки характеристик со строками на одной высоте, справа QR
+    const qrS = 140, colW = (CW - qrS - 80) / 2, cols = [L, L + colW + 40];
+    const cap = (size) => size * 0.72;   // текст обрезан по высоте прописных, как на экране
+    const wrap = (text, maxW) => {
+      const words = String(text).split(' '); const lines = []; let line = '';
+      for (const w of words) { const tryL = line ? line + ' ' + w : w; if (x.measureText(tryL).width > maxW && line) { lines.push(line); line = w; } else line = tryL; }
+      if (line) lines.push(line); return lines;
+    };
+    const cell = (k, v, size = 20) => {
+      font(700, 16); const lw = x.measureText(k + ':').width;
+      font(400, size); const lines = wrap(v || '—', colW - lw - 16);
+      return { k, size, lines, h: cap(size) + (lines.length - 1) * size * 1.2 };
+    };
+    const rows = [
+      [cell('Roast', d.roast), cell('Origin', d.origin)],
+      [cell('Process', d.process), cell('Farm', d.farm)],
+      [cell('Notes', p.notes.join(', '), 16), cell('Altitude', d.altitude)],
+      [cell('Variety', d.variety), { taste: true, h: 3 * 14 + 2 * 6 }]
+    ];
+    const rowH = rows.map((r) => Math.max(r[0].h, r[1].h));
+    const gridH = rowH.reduce((sum, h) => sum + h, 0) + (rows.length - 1) * 40.6;
+    const tableTop = footY - 14 - 60 - Math.max(gridH, qrS + 20 + cap(16));
     const imgBottom = tableTop - 40;
     x.fillStyle = '#ffffff'; x.beginPath(); x.roundRect(L, y, CW, imgBottom - y, 16); x.fill();
     const box = { x: L + 20, y: y + 20, w: CW - 40, h: imgBottom - y - 40 };
@@ -376,47 +420,35 @@
     x.filter = 'brightness(1.013)';
     x.drawImage(pack, box.x + (box.w - pack.width * pk) / 2, box.y + (box.h - pack.height * pk) / 2, pack.width * pk, pack.height * pk);
     x.filter = 'none';
-    x.fillStyle = ink;
+    x.fillStyle = ink; x.strokeStyle = ink;
 
-    // таблица: две колонки характеристик + QR
-    const colW = (CW - qrS - 80) / 2;
-    const wrap = (text, maxW) => {
-      const words = String(text).split(' '); const lines = []; let line = '';
-      for (const w of words) { const tryL = line ? line + ' ' + w : w; if (x.measureText(tryL).width > maxW && line) { lines.push(line); line = w; } else line = tryL; }
-      if (line) lines.push(line); return lines;
-    };
-    const kvCol = (cx, rows, tail) => {
-      let cy = tableTop;
-      rows.forEach(([k, v], i) => {
-        font(700, 10); x.fillText(k + ':', cx, cy + 7);
-        const lw = x.measureText(k + ':').width;
-        font(400, 13); x.textAlign = 'right';
-        const lines = wrap(v || '—', colW - lw - 16);
-        lines.forEach((l, j) => x.fillText(l, cx + colW, cy + 9 + j * 15));
-        x.textAlign = 'left';
-        cy += 9 + (lines.length - 1) * 15 + 20;
-        if (i < rows.length - 1 || tail) { x.fillRect(cx, cy, colW, 0.6); cy += 20; }
-      });
-      if (tail) tail(cx, cy);
-    };
-    kvCol(L, [['Roast', d.roast], ['Process', d.process], ['Notes', p.notes.join(', ')], ['Variety', d.variety]]);
-    kvCol(L + colW + 40, [['Origin', d.origin], ['Farm', d.farm], ['Altitude', d.altitude]], (cx, cy) => {
-      ['acidity', 'bitterness', 'sweetness'].forEach((key, r) => {
-        const ry = cy + r * 16;
-        for (let i = 1; i <= 5; i++) {
-          const sx = cx + (i - 1) * 14;
-          if (i <= p.taste[key]) x.fillRect(sx, ry, 10, 10);
-          else { x.lineWidth = 0.92; x.strokeRect(sx + 0.46, ry + 0.46, 9.08, 9.08); }
-        }
-        font(400, 13); x.textAlign = 'right'; x.fillText(key[0].toUpperCase() + key.slice(1), cx + colW, ry + 9); x.textAlign = 'left';
-      });
+    const drawTaste = (cx, ty) => ['acidity', 'bitterness', 'sweetness'].forEach((key, r) => {
+      const sy = ty + r * 20;
+      for (let i = 1; i <= 5; i++) {
+        const sx = cx + (i - 1) * 18;
+        if (i <= p.taste[key]) x.fillRect(sx, sy, 14, 14);
+        else { x.lineWidth = 1.29; x.strokeRect(sx + 0.645, sy + 0.645, 12.71, 12.71); }
+      }
+      font(400, 20); x.textAlign = 'right'; x.fillText(key[0].toUpperCase() + key.slice(1), cx + colW, sy + 7 + cap(20) / 2); x.textAlign = 'left';
     });
-    const qx = R - qrS, qy = tableTop;
-    x.fillStyle = '#ffffff'; x.beginPath(); x.roundRect(qx, qy, qrS, qrS, 12); x.fill();
-    const qr = qrMatrix(p.url); const n = qr.getModuleCount(); const cell = (qrS - 20) / n;
-    x.fillStyle = ink;
-    for (let r = 0; r < n; r++) for (let cc = 0; cc < n; cc++) if (qr.isDark(r, cc)) x.fillRect(qx + 10 + cc * cell, qy + 10 + r * cell, cell + 0.3, cell + 0.3);
-    font(400, 13); x.fillText('Scan to open it', qx, qy + qrS + 22); x.fillText('in our e-shop', qx, qy + qrS + 37);
+    let ry = tableTop;
+    rows.forEach((r, i) => {
+      r.forEach((c, j) => {
+        const cx = cols[j];
+        if (c.taste) { drawTaste(cx, ry); return; }
+        font(700, 16); x.fillText(c.k + ':', cx, ry + cap(16));
+        font(400, c.size); x.textAlign = 'right';
+        c.lines.forEach((l, n) => x.fillText(l, cx + colW, ry + cap(c.size) + n * c.size * 1.2));
+        x.textAlign = 'left';
+      });
+      ry += rowH[i];
+      if (i < rows.length - 1) { ry += 20; cols.forEach((cx) => x.fillRect(cx, ry, colW, 0.6)); ry += 20.6; }
+    });
+
+    const q = qrModel(p.url), qx = R - qrS, qy = tableTop, m = qrS / q.n;
+    for (let r = 0; r < q.n; r++) for (let cc = 0; cc < q.n; cc++) if (q.dark(r, cc)) x.fillRect(qx + cc * m, qy + r * m, m + 0.3, m + 0.3);
+    x.save(); x.translate(qx + q.arrow.x * m, qy + q.arrow.y * m); x.scale(q.arrow.w * m / ARROW_W, q.arrow.w * m / ARROW_W); x.fill(new Path2D(ARROW_D)); x.restore();
+    font(700, 16); x.fillText('Open in e-shop', qx, qy + qrS + 20 + cap(16));
 
     const blob = await new Promise((res) => c.toBlob(res, 'image/png'));
     return new File([blob], `the-miners-${p.id}.png`, { type: 'image/png' });
@@ -502,6 +534,18 @@
 
   document.addEventListener('contextmenu', (e) => e.preventDefault());
   document.addEventListener('gesturestart', (e) => e.preventDefault());
+
+  // iPad, иконка на экране «Домой»: iOS отдаёт высоту окна без статус-бара, хотя рисует страницу от самого верха,
+  // и снизу остаётся тёмная полоса. Растягиваем всё на настоящую высоту экрана (всё полноэкранное считается от верха)
+  function fitScreen() {
+    const standalone = navigator.standalone || matchMedia('(display-mode: standalone)').matches;
+    const gap = screen.height - innerHeight;
+    const root = document.documentElement.style;
+    if (standalone && gap >= 0 && gap <= 60 && !document.fullscreenElement && !document.webkitFullscreenElement) root.setProperty('--app-h', screen.height + 'px');
+    else root.removeProperty('--app-h');
+  }
+  fitScreen();
+  addEventListener('resize', fitScreen);
 
   // Прогреваем картинки, чтобы на iPad ничего не мигало
   [...QUESTIONS.flatMap((q) => q.options.map((o) => o.image || o.icon)).filter(Boolean), ...PRODUCTS.map((p) => p.image)]

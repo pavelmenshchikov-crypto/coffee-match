@@ -212,8 +212,8 @@ window.TM_PRODUCTS = [
 
 /* Подпись формата на карточке результата */
 window.TM_FORMAT_LABEL = {
-  'beans:espresso': 'Whole beans 250 g · Espresso roast',
-  'beans:filter': 'Whole beans 250 g · Filter roast',
+  'beans:espresso': 'Whole beans · Espresso roast',
+  'beans:filter': 'Whole beans · Filter roast',
   'capsules': 'Capsules · Nespresso® Original',
   'drip': 'Drip bag · Single serve',
   'can': 'Can · Nitro cold brew'
@@ -271,7 +271,7 @@ window.TM_QUESTIONS = [
     title: ['Your specialty', 'coffee level?'],
     options: [
       { value: 'beginner', label: 'Rookie', note: 'Getting started. Coffee is coffee — show me the good.', icon: 'assets/icons/level-rookie.svg' },
-      { value: 'regular', label: 'Hooked', note: 'I drink it now and then. I know my flat white from my latte.', icon: 'assets/icons/level-hooked.svg' },
+      { value: 'regular', label: 'Hooked', note: 'I drink it now and then. I know what a flat white is.', icon: 'assets/icons/level-hooked.svg' },
       { value: 'nerd', label: 'Nerd', note: 'Every day. Washed, natural, anaerobic — bring it on.', icon: 'assets/icons/level-nerd.svg' }
     ]
   },
@@ -296,7 +296,7 @@ window.TM_QUESTIONS = [
     type: 'single',
     skipIf: onlyCans,
     helper: 'Some coffees shine with milk, others are best black.',
-    title: ['Milk', 'or', 'no milk?'],
+    title: ['With', 'or without', 'milk?'],
     options: [
       { value: 'milk', label: 'Usually with milk' },
       { value: 'black', label: 'Black, always' },

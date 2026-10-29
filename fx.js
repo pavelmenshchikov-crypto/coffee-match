@@ -98,14 +98,22 @@ vec3 boom(vec2 p, float k) {
   return col;
 }
 
-// Живой градиент: картинка из Photoshop + медленная деформация шумом
+// Живой градиент: картинку из Photoshop перемешивает течение шума,
+// а по экрану медленно плывут два больших пятна — тёмный жар и жёлтое свечение.
+// Панель квиза закрывает середину, поэтому движение должно читаться по краям
 vec3 living(vec2 p, float t) {
   vec2 uv = p / vec2(1024.0, 1366.0);
-  vec2 w = vec2(fbm(uv * 1.8 + vec2(t * 0.09, 0.0)), fbm(uv * 1.8 + vec2(7.3, -t * 0.08)));
-  vec2 w2 = vec2(fbm(uv * 3.1 - vec2(0.0, t * 0.07) + 3.1), fbm(uv * 3.1 + vec2(t * 0.06, 9.2)));
-  uv += w * 0.20 + w2 * 0.07 + vec2(sin(t * 0.13), cos(t * 0.11)) * 0.04;
-  uv = clamp(uv, 0.002, 0.998);
-  return texture2D(u_tex, uv).rgb * (1.0 + 0.05 * fbm(uv * 1.5 + t * 0.1));
+  vec2 w = vec2(fbm(uv * 1.5 + vec2(t * 0.21, 0.0)), fbm(uv * 1.5 + vec2(7.3, -t * 0.18)));
+  vec2 w2 = vec2(fbm(uv * 2.6 + w * 1.2 - vec2(0.0, t * 0.15) + 3.1), fbm(uv * 2.6 + w * 1.2 + vec2(t * 0.13, 9.2)));
+  vec2 suv = uv + w * 0.26 + w2 * 0.10 + vec2(sin(t * 0.29), cos(t * 0.23)) * 0.05;
+  vec3 col = texture2D(u_tex, clamp(suv, 0.002, 0.998)).rgb;
+  vec2 ember = vec2(512.0 + 520.0 * sin(t * 0.21), 420.0 + 300.0 * sin(t * 0.16 + 1.3));
+  vec2 glow = vec2(512.0 + 520.0 * sin(t * 0.18 + 2.4), 1050.0 + 280.0 * cos(t * 0.23));
+  float ea = exp(-dot(p - ember, p - ember) / (2.0 * 330.0 * 330.0));
+  float eb = exp(-dot(p - glow, p - glow) / (2.0 * 360.0 * 360.0));
+  col = mix(col, vec3(0.80, 0.20, 0.0), 0.55 * ea);
+  col = mix(col, C2, 0.40 * eb);
+  return col;
 }
 
 void main() {
