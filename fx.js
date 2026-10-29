@@ -58,7 +58,7 @@ vec3 sphereGrad(float t) {
 }
 
 // Сфера: центр (512, 873), диаметр 940. grow > 1 — сфера раздувается при взрыве.
-// u_variant — характер движения: 0 Wave, 1 Side flames, 2 Molten, 3 Breathe
+// u_variant — характер движения: 0 Wave, 1 Side flames, 2 Molten, 3 Breathe, 4 Blend (между Molten и Breathe)
 vec3 sphere(vec2 p, float t, float grow) {
   vec2 c = vec2(512.0, 873.0);
   float R = 470.0;
@@ -83,18 +83,19 @@ vec3 sphere(vec2 p, float t, float grow) {
     rOff = side * smoothstep(-0.1, 0.6, f) * 90.0;
     blurK = 1.0 + side * 0.8;
     tShift = -0.05 * side;
-  } else if (u_variant < 2.5) {
-    // Molten: край медленно плавится, внутри перетекают цвета
+  } else {
+    // Molten (2), Breathe (3), Blend (4) — одна модель с весами:
+    // m — край медленно плавится и внутри перетекают цвета, b — сфера дышит размером, блюром и границей цвета
+    float m = u_variant < 2.5 ? 1.0 : (u_variant < 3.5 ? 0.0 : 0.5);
+    float b = u_variant < 2.5 ? 0.0 : (u_variant < 3.5 ? 1.0 : 0.7);
     float ang = atan(p.y - c.y, p.x - c.x);
     float base = smoothstep(0.62, 1.0, ty0);
-    rOff = (1.0 - 0.85 * base) * (18.0 * sin(ang * 3.0 + t * 0.6) + 10.0 * sin(ang * 5.0 - t * 0.85) + 5.0 * sin(ang * 7.0 + t * 1.15));
+    rOff = m * (1.0 - 0.85 * base) * (18.0 * sin(ang * 3.0 + t * 0.6) + 10.0 * sin(ang * 5.0 - t * 0.85) + 5.0 * sin(ang * 7.0 + t * 1.15));
+    Rb = R * (1.0 + b * 0.025 * sin(t * 1.1));
+    blurK = 1.0 + b * 0.45 * sin(t * 1.1 + 0.9);
     // крупные мягкие потоки цвета внутри — без мелкой пятнистости
-    tShift = 0.12 * noise(p / 420.0 + vec2(t * 0.12, -t * 0.16)) + 0.06 * noise(p / 260.0 - vec2(t * 0.09, t * 0.07));
-  } else {
-    // Breathe: без искажений — сфера дышит, блюр и оранжевая граница медленно гуляют
-    Rb = R * (1.0 + 0.025 * sin(t * 1.1));
-    blurK = 1.0 + 0.45 * sin(t * 1.1 + 0.9);
-    tShift = 0.09 * sin(t * 0.8) + 0.03 * sin(t * 1.9);
+    tShift = m * (0.12 * noise(p / 420.0 + vec2(t * 0.12, -t * 0.16)) + 0.06 * noise(p / 260.0 - vec2(t * 0.09, t * 0.07)))
+           + b * (0.09 * sin(t * 0.8) + 0.03 * sin(t * 1.9));
   }
 
   vec2 pw = c + (p + warp - c) / grow;
@@ -153,9 +154,9 @@ void main() {
   gl_FragColor = vec4(col, 1.0);
 }`;
 
-  // Вариант движения сферы: ?sphere=wave|flames|molten|breathe, по умолчанию — DEFAULT_VARIANT
-  const VARIANTS = { wave: 0, flames: 1, molten: 2, breathe: 3 };
-  const DEFAULT_VARIANT = 'molten';
+  // Вариант движения сферы: ?sphere=wave|flames|molten|breathe|blend, по умолчанию — DEFAULT_VARIANT
+  const VARIANTS = { wave: 0, flames: 1, molten: 2, breathe: 3, blend: 4 };
+  const DEFAULT_VARIANT = 'blend';
   const fromUrl = (location.search.match(/[?&]sphere=(\w+)/) || [])[1];
 
   const FX = {

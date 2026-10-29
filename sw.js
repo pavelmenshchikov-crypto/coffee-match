@@ -2,7 +2,7 @@
    Код (HTML, JS, CSS): есть интернет — берём свежий с сервера, нет (или не ответил за NETWORK_TIMEOUT_MS) — из кеша.
    Файлы из assets/ (фото, шрифты, иконки): сразу из кеша, чтобы на слабом Wi‑Fi ничего не ждало сеть.
    После правки файлов поднимите VERSION, чтобы кеш пересобрался целиком — заменённые фото тоже подтянутся. */
-const VERSION = 'coffee-match-v9';
+const VERSION = 'coffee-match-v10';
 const NETWORK_TIMEOUT_MS = 3000;
 const FILES = [
   './',
