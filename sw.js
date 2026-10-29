@@ -2,7 +2,7 @@
    Код (HTML, JS, CSS): есть интернет — берём свежий с сервера, нет (или не ответил за NETWORK_TIMEOUT_MS) — из кеша.
    Файлы из assets/ (фото, шрифты, иконки): сразу из кеша, чтобы на слабом Wi‑Fi ничего не ждало сеть.
    После правки файлов поднимите VERSION, чтобы кеш пересобрался целиком — заменённые фото тоже подтянутся. */
-const VERSION = 'coffee-match-v12';
+const VERSION = 'coffee-match-v13';
 const NETWORK_TIMEOUT_MS = 3000;
 const FILES = [
   './',
@@ -24,10 +24,10 @@ const FILES = [
   'assets/fonts/NeueHaasDisplayLight.ttf',
   'assets/fonts/NeueHaasDisplayMedium.ttf',
   'assets/fonts/NeueHaasDisplayRoman.ttf',
-  'assets/icons/apple-touch-icon.png',
   'assets/icons/back.svg',
-  'assets/icons/icon-192.png',
-  'assets/icons/icon-512.png',
+  'assets/icons/home-icon-180.png',
+  'assets/icons/home-icon-192.png',
+  'assets/icons/home-icon-512.png',
   'assets/icons/level-hooked.svg',
   'assets/icons/level-nerd.svg',
   'assets/icons/level-rookie.svg',

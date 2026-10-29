@@ -513,6 +513,13 @@
     saveBar(map);
     t.classList.toggle('on');
   });
+  // Строка для диагностики на iPad: какая версия реально запущена и какие размеры видит страница
+  async function renderAdminInfo() {
+    const ver = window.caches ? (await caches.keys().catch(() => [])).find((k) => k.startsWith('coffee-match')) : null;
+    const mode = isStandalone() ? 'home screen' : 'browser';
+    const fs = (document.fullscreenEnabled || document.webkitFullscreenEnabled) ? 'available' : 'unavailable';
+    $('#admin-info').textContent = `${ver || 'no offline cache yet'} · ${mode} · screen ${screen.width}×${screen.height} · window ${innerWidth}×${innerHeight} · page ${getComputedStyle(document.documentElement).getPropertyValue('--app-h') || '—'} · fullscreen ${fs}`;
+  }
   $('#admin-all').addEventListener('click', () => { saveBar({}); renderAdmin(); });
   $('#admin-close').addEventListener('click', () => { admin.hidden = true; });
   $('#idle-stay').addEventListener('click', stopCountdown);
@@ -522,7 +529,7 @@
     e.stopPropagation();
     const now = Date.now();
     taps = taps.filter((t) => now - t < 2500).concat(now);
-    if (taps.length >= 5) { taps = []; renderAdmin(); admin.hidden = false; }
+    if (taps.length >= 5) { taps = []; renderAdmin(); renderAdminInfo(); admin.hidden = false; }
   });
 
   intro.addEventListener('click', explode);
@@ -537,11 +544,11 @@
 
   // iPad, иконка на экране «Домой»: iOS отдаёт высоту окна без статус-бара, хотя рисует страницу от самого верха,
   // и снизу остаётся тёмная полоса. Растягиваем всё на настоящую высоту экрана (всё полноэкранное считается от верха)
+  const isStandalone = () => navigator.standalone === true || matchMedia('(display-mode: standalone)').matches;
   function fitScreen() {
-    const standalone = navigator.standalone || matchMedia('(display-mode: standalone)').matches;
     const gap = screen.height - innerHeight;
     const root = document.documentElement.style;
-    if (standalone && gap >= 0 && gap <= 60 && !document.fullscreenElement && !document.webkitFullscreenElement) root.setProperty('--app-h', screen.height + 'px');
+    if (isStandalone() && gap >= 0 && gap <= 80 && !document.fullscreenElement && !document.webkitFullscreenElement) root.setProperty('--app-h', screen.height + 'px');
     else root.removeProperty('--app-h');
   }
   fitScreen();
@@ -562,6 +569,11 @@
       if (state.screen === 'intro') location.reload();
       else reloadOnStart = true;
     });
-    navigator.serviceWorker.register('sw.js').catch(() => {});
+    // Приложение с иконки iPad обычно не перезапускается, а просыпается со старым кодом —
+    // поэтому проверяем обновление при каждом возвращении на экран и раз в 10 минут
+    navigator.serviceWorker.register('sw.js').then((reg) => {
+      document.addEventListener('visibilitychange', () => { if (!document.hidden) reg.update().catch(() => {}); });
+      setInterval(() => reg.update().catch(() => {}), 10 * 60 * 1000);
+    }).catch(() => {});
   }
 })();

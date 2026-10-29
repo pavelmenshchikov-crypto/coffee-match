@@ -287,6 +287,7 @@ body.no-gl.boomed { background: url('assets/bg/gradient.png') center / cover; }
 .qr-col { flex: none; width: 8.75rem; display: flex; flex-direction: column; gap: 1.25rem; }
 .qr-col svg { width: 100%; aspect-ratio: 1; display: block; }
 .qr-col .t-key { white-space: nowrap; }
+.admin-info { color: #8a8a8a; line-height: 1.4; }
 
 /* ---------- оверлеи ---------- */
 
